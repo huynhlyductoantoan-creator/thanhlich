@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>⚡ ĐẤU TRƯỜNG SIÊU NHÍ: CHINH PHỤC VIỆT NAM</title>
+	<style>
+		:root {
+			--pole-dark: #1e2635;
+			--pole-light: #233451;
+			--sewer-dark: #3a392f;
+			--sewer-light: #4a4a3d;
+			--ground-light: #83744b;
+			--ground-dark: #6d5f45;
+		}
+
+		body {
+			margin: 0;
+			padding: 0;
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(180deg, #17175f, #ffd844);
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			user-select: none;
+		}
+
+		/* Bầu trời sao lấp lánh phía sau */
+		body:before {
+			content: "";
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			background: repeating-conic-gradient(#FFF9 0%, #fff0 .000075%, #fff0 .0005%, #fff0 .12345%);
+			filter: blur(0.5px) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+			z-index: 0;
+		}
+
+		.content {
+			width: 100vw;
+			height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+		}
+
+		/* BỨC TRANH CANVAS CHỨA CON VẬT DI CHUYỂN */
+		#monster-canvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			z-index: 4;
+			pointer-events: none; /* Giúp chuột xuyên qua con vật để bấm nút */
+		}
+
+		/* LỚP NỀN THÀNH PHỐ VÀ CỘT ĐÈN */
+		.buildings {
+			width: 100vw;
+			height: 100vh;
+			background: linear-gradient(180deg, #021023, #222329); 
+			clip-path: polygon(0% 41%, 15% 26%, 27% 42%, 32% 42%, 33% 40%, 29% 40%, 46% 16%, 63% 39%, 59% 39%, 61% 42%, 68% 41.5%, 70% 27%, 89% 27%, 92% 41%, 100% 40%, 100% 100%, 0% 100%);
+			position: absolute;
+			top: 0;
+			left: 0;
+			z-index: 1;
+		}
+
+		.window {
+			background: 
+				linear-gradient(88deg, #fff0 0 calc(50% - 0.2vw), #111 calc((50% - 0.2vw) + 1px) calc(50% + 0.2vw), #fff0 calc((50% + 0.2vw) + 1px) 100%), 
+				repeating-linear-gradient(182deg, #fff0 0 calc(30% - 0.2vw), #111 calc((30% - 0.2vw) + 1px) calc(30% + 0.2vw), #fff0 calc((30% + 0.2vw) + 1px) 37%), #e7d09a;
+			width: 5vmin;
+			height: 7vmin;
+			position: absolute;
+			left: 5vw;
+			transform: scale(0.8);
+			margin-top: 3vmin;
+			clip-path: polygon(0 0, 100% 0, 85% 100%, 10% 100%);
+		}
+		.window:nth-child(2) { left: 16vw; margin-top: 3.25vmin; }
+		.window:nth-child(3) { left: 12vw; margin-top: -26vmin; clip-path: polygon(5% 0%, 97% 1%, 85% 65%, 10% 63%); }
+		.window:nth-child(4) { right: 12vw; margin-top: -4vmin; left: inherit; }
+		.window:nth-child(5) { right: 22vw; margin-top: -4vmin; left: inherit; transform: scale(0.85) rotateY(180deg); }
+
+		.ground {
+			background: radial-gradient(circle at 50% 350vh, var(--ground-light) 0 343vh, #333 calc(343vh + 2px) 346vh, var(--ground-dark) calc(346vh + 2px) 100%);
+			position: absolute;
+			width: 150vw;
+			height: 26vh;
+			bottom: 0;
+			border-radius: 100% 100% 0 0;
+			z-index: 2;
+			opacity: 0.5;
+		}
+
+		.sewer {
+			position: absolute;
+			width: 130px;
+			height: 50px;
+			margin-left: -500px;
+			margin-top: -50px;
+			clip-path: polygon(0% 33%, 65% 10%, 100% 35%, 40% 80%);
+			background: 
+				linear-gradient(-188deg, var(--sewer-dark) 0 19px, #fff0 20px 100%), 
+				linear-gradient(-16deg, var(--sewer-dark) 0 34px, #fff0 35px 100%), 
+				linear-gradient(-163deg, var(--sewer-dark) 0 19px, #fff0 20px 100%), 
+				linear-gradient(25deg, var(--sewer-dark) 0 33px, var(--sewer-light) 34px 39px, var(--sewer-dark) 40px 46px, var(--sewer-light) 47px 52px, var(--sewer-dark) 53px 59px, var(--sewer-light) 60px 67px, var(--sewer-dark) 68px 73px, var(--sewer-light) 74px 90px, #fff0 0 100%);
+		}
+
+		.streetlamp {
+			width: 80px;
+			height: 72vh;
+			position: absolute;
+			top: 20vh;
+			left: 32%;
+			max-width: 80px;
+			min-width: 80px;
+			z-index: 3;
+		}
+
+		.base {
+			bottom: 0; right: 0; position: absolute; width: 81%; height: 24%;
+			background: linear-gradient(-94deg, var(--pole-dark) 0 23%, #fff0 calc(23% + 1px) 100%), linear-gradient(-1deg, var(--pole-dark) 0 3.65%, #fff0 calc(1.65% + 1px) 100%), linear-gradient(85deg, var(--pole-dark) 0 58%, var(--pole-light) calc(58% + 1px) 100%);
+			border-radius: 2px; clip-path: polygon(15% 0, 76% 0, 95% 99%, 0% 99%); z-index: 1;
+		}
+
+		.basetop {
+			background: #1e2634; width: 75%; height: 3%; position: absolute;
+			bottom: 24%; left: 16%; border-radius: 2px; z-index: 2; transform: rotate(-0.5deg);
+		}
+
+		.pole {
+			position: absolute; width: 25%; height: 56.5%;
+			background: linear-gradient(-1deg, var(--pole-dark) 0 1.65%, #fff0 calc(1.65% + 1px) 100%), linear-gradient(-91deg, var(--pole-dark) 0 35%, #fff0 calc(35% + 1px) 100%), linear-gradient(89.5deg, var(--pole-dark) 0 40%, var(--pole-light) calc(40% + 1px) 100%);
+			bottom: 26.25%; left: 45%; clip-path: polygon(17% 0, 60% 0, 95% 99%, 0% 99%); z-index: 1;
+		}
+
+		.poletop {
+			width: 20%; height: 1.5%; background: var(--pole-dark); position: absolute;
+			bottom: 82%; left: 44%; z-index: 1; clip-path: polygon(0% 0, 100% 0, 95% 65%, 10% 72%);
+		}
+
+		.head { position: absolute; width: 100%; height: 100px; bottom: 83%; z-index: 5; }
+		.head .top {
+			background: conic-gradient(from 131deg at 55% 0, var(--pole-light) 0 12%, var(--pole-dark) 13% 29.5%, #fff0 0 100%);
+			width: 100%; height: 30%; top: 20%; position: absolute; transform: rotate(-3deg);
+		}
+		.head .bot {
+			width: 75%; height: 5%; background: linear-gradient(45deg, #fff0 12%, var(--pole-dark) 0 65%, #fff0 0 100%), linear-gradient(-50deg, #fff0 8%, var(--pole-dark) 0 65%, #fff0 0 100%);
+			left: 17%; position: absolute; bottom: 1%; transform: rotate(-3deg);
+		}
+
+		.glass {
+			background: 
+				linear-gradient(-79deg, #fff0 0 12%, var(--pole-dark) 13% 16%, #fff0 17% 100%), 
+				conic-gradient(from -46deg at 53% 200%, #fff0 0 13%, var(--pole-dark) 13.2% 14%, #fff0 14.2% 100%), 
+				linear-gradient(70deg, #fff0 0 21%, var(--pole-dark) 22% 25%, #fff0 26% 100%), 
+				radial-gradient(circle at 37% 250%, #fff0 0 73%, #e4ce8b 75% 100%), 
+				radial-gradient(circle at 37% 300%, #fff0 0 73%, #e4ce8b 75% 100%), 
+				conic-gradient(from -46deg at 53% 200%, #fff0 0 7%, #f5f3b0 0 13%, var(--pole-dark) 13.2% 14%, #fff0 14.2% 100%), 
+				linear-gradient(-79deg, #fff0 0 12%, var(--pole-dark) 13% 16%, #ffe5ad 17% 50%, #fff0 17% 100%);
+			background-repeat: no-repeat; background-size: 100% 100%, 100% 100%, 100% 100%, 33% 42%, 50% 35%, 100% 100%;
+			background-position: 0 0, 0 0, 0 0, 90% 0, 20% 0, 0 0;
+			width: 100%; height: 45%; top: 50%; position: absolute; transform: rotate(-3deg); opacity: 0.5;
+		}
+
+		.light {
+			background: linear-gradient(180deg, #dac47080, #dac47020 90%, #fff0 100%);
+			width: 650px; height: 64vh; position: absolute; left: -274px; bottom: 1.5%;
+			clip-path: polygon(43% 1%, 53% 0.35%, 100% 100%, 0 100%); opacity: 0; pointer-events: none;
+		}
+
+		.ground-light {
+			background: #dac47080; width: 650px; left: -275px; position: absolute;
+			bottom: -28px; height: 80px; border-radius: 100%; z-index: 0; opacity: 0; pointer-events: none;
+		}
+
+		.top:before {
+			content: ""; position: absolute; background: var(--pole-light); width: 8px; height: 12px;
+			border-radius: 100%; left: 48%; top: -40%; border: 3px solid var(--pole-dark); border-left-width: 0;
+		}
+		.top:after {
+			content: ""; position: absolute; background: var(--pole-dark); width: 4px; height: 12px;
+			border-radius: 100%; left: 52%; top: -70%;
+		}
+
+		#btn { display: none; }
+
+		label[for=btn] {
+			position: absolute; width: 80%; height: 55%; z-index: 6;
+			top: 45%; left: 11%; border-radius: 50% 50% 100% 150%; cursor: pointer;
+		}
+
+		#btn:checked + .content .light,
+		#btn:checked + .content .ground-light,
+		#btn:checked + .content .head .glass {
+			animation: turn-on 2s ease 0s 1;
+			opacity: 1;
+		}
+		#btn:checked + .content .ground { opacity: 0.9; }
+
+		@keyframes turn-on {
+			0%, 10%, 25% { opacity: 0; }
+			5%, 15%, 35%, 100% { opacity: 1; }
+		}
+
+		/* KHUNG GIAO DIỆN HỌC TẬP KÍNH MỜ */
+		.quiz-container {
+			position: absolute;
+			right: 8%;
+			top: 50%;
+			transform: translateY(-50%);
+			background: rgba(18, 25, 41, 0.45);
+			backdrop-filter: blur(20px);
+			-webkit-backdrop-filter: blur(20px);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			border-radius: 24px;
+			box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+			padding: 25px;
+			width: 90%;
+			max-width: 460px;
+			text-align: center;
+			overflow: hidden;
+			z-index: 10;
+			transition: all 0.3s ease;
+		}
+
+		.audio-control {
+			position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.2);
+			border: none; color: white; font-size: 14px; padding: 6px 12px; border-radius: 20px;
+			cursor: pointer; font-weight: bold; backdrop-filter: blur(5px);
+		}
+		.audio-control:hover { background: rgba(255, 255, 255, 0.4); }
+
+		h1.game-title {
+			color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+			font-size: 19px; font-weight: 800; margin-top: 15px; margin-bottom: 12px;
+		}
+
+		.progress {
+			font-size: 13px; font-weight: bold; color: #fff;
+			background: linear-gradient(90deg, #ff9800, #ff5722);
+			padding: 5px 16px; border-radius: 20px; display: inline-block; margin-bottom: 15px;
+		}
+
+		.quiz-image {
+			width: 100%; height: 170px; object-fit: contain;
+			background-color: rgba(255, 255, 255, 0.95);
+			border-radius: 14px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+		}
+
+		.question {
+			font-size: 16px; font-weight: 700; color: #ffffff;
+			margin-bottom: 18px; line-height: 1.5; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+		}
+
+		.options-container { display: flex; flex-direction: column; gap: 10px; }
+
+		.option-btn {
+			background-color: rgba(255, 255, 255, 0.9);
+			border: none; border-radius: 12px; padding: 12px 16px;
+			font-size: 14px; font-weight: 600; color: #2c3e50;
+			cursor: pointer; text-align: left; transition: all 0.2s ease;
+		}
+		.option-btn:hover { background-color: #fffde7; transform: translateY(-2px); }
+
+		.correct { background: linear-gradient(90deg, #4caf50, #81c784) !important; color: white !important; }
+		.wrong { background: linear-gradient(90deg, #e53935, #ef5350) !important; color: white !important; }
+
+		/* PHẢN HỒI KHI TRẢ LỜI */
+		.feedback-overlay {
+			position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+			display: flex; flex-direction: column; justify-content: center; align-items: center;
+			z-index: 20; display: none;
+		}
+		.feedback-overlay.good-bg { background: rgba(13, 31, 18, 0.96); }
+		.feedback-overlay.bad-bg { background: rgba(38, 15, 15, 0.96); }
+		.feedback-text { font-size: 30px; font-weight: 900; margin-top: 15px; }
+		.feedback-text.good { color: #4caf50; }
+		.feedback-text.bad { color: #f44336; }
+
+		.confetti {
+			position: absolute; width: 8px; height: 8px; border-radius: 50%;
+			animation: fall 1.5s linear infinite; opacity: 0.8;
+		}
+
+		.shake-screen { animation: screenShake 0.4s ease-in-out; }
+		.result-screen { display: none; }
+		.restart-btn {
+			background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%);
+			color: white; border: none; padding: 12px 30px; font-size: 15px;
+			border-radius: 25px; cursor: pointer; margin-top: 20px; font-weight: bold;
+		}
+
+		@keyframes screenShake { 0%, 100% { transform: translateY(-50%) translateX(0); } 20%, 60% { transform: translateY(-50%) translateX(-8px); } 40%, 80% { transform: translateY(-50%) translateX(8px); } }
+		@keyframes fall { 0% { transform: translateY(-50px); opacity: 1; } 100% { transform: translateY(350px); opacity: 0; } }
+
+		/* ĐÁP ỨNG THIẾT BỊ DI ĐỘNG */
+		@media screen and (max-width: 850px) {
+			.streetlamp { left: 8%; transform: scale(0.75); top: 12vh; }
+			.quiz-container { right: 5%; top: 50%; max-width: 360px; background: rgba(10, 16, 28, 0.8); }
+		}
+		@media screen and (max-width: 550px) {
+			.streetlamp { display: none; }
+			.quiz-container { position: relative; right: 0; top: 0; transform: none; margin: 15px; width: 90%; }
+		}
+	</style>
+</head>
+<body>
+
+<input type="checkbox" name="btn" id="btn" checked>
+
+<div class="content">
+	<div class="buildings">
+		<div class="window"></div>
+		<div class="window"></div>
+		<div class="window"></div>
+		<div class="window"></div>
+		<div class="window"></div>
+		<div class="window"></div>
+	</div>
+	<div class="ground"><div class="sewer"></div></div>
+
+	<div class="streetlamp">
+		<div class="base"></div>
+		<div class="basetop"></div>
+		<div class="pole"></div>
+		<div class="poletop"></div>
+		<div class="head">
+			<label for="btn" title="Bấm vào bóng đèn để Bật/Tắt nè!"></label>
+			<div class="top"></div>
+			<div class="glass"></div>
+			<div class="bot"></div>
+		</div>
+		<div class="light"></div>
+		<div class="ground-light"></div>
+	</div>
+
+	<canvas id="monster-canvas"></canvas>
+
+	<div class="quiz-container" id="main-card">
+		<button class="audio-control" id="audio-btn" onclick="toggleMusic()">🔊 Nhạc: Bật</button>
+
+		<div id="feedback-overlay" class="feedback-overlay">
+			<div id="feedback-icon" style="font-size: 50px;">🎉</div>
+			<div id="feedback-text" class="feedback-text">Giỏi quá!</div>
+		</div>
+
+		<div id="quiz-screen">
+			<h1 class="game-title">⚡ ĐẤU TRƯỜNG SIÊU NHÍ: VIỆT NAM 🇻🇳</h1>
+			<div class="progress" id="progress">Câu hỏi 1 / 5</div>
+			<img src="" alt="Hình ảnh thử thách" class="quiz-image" id="quiz-image">
+			<div class="question" id="question-text">Đang tải dữ liệu...</div>
+			<div class="options-container" id="options-container"></div>
+		</div>
+
+		<div id="result-screen" class="result-screen">
+			<h1 style="color: #4caf50; font-size: 22px; margin-bottom: 5px;">🎉 HOÀN THÀNH XUẤT SẮC!</h1>
+			<img src="https://raw.githubusercontent.com/huynhlyductoantoan-creator/netdep/main/VI%E1%BB%86T%20NAM%F0%9F%87%BB%F0%9F%87%B3.jfif" alt="Chúc mừng" class="quiz-image">
+			<div class="question" id="score-text" style="font-size: 18px; color: #ff9800;">Em đạt được 0/5 điểm!</div>
+			<div id="rank-text" style="font-size: 14px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">Đang tính toán hạng...</div>
+			<br>
+			<button class="restart-btn" onclick="restartQuiz()">Thử Thách Lại Từ Đầu 🔁</button>
+		</div>
+	</div>
+</div>
+
+<audio id="bg-music" loop>
+	<source src="https://assets.codepen.io/4358584/Anitek_-_01_-_Kisses.mp3" type="audio/mp3">
+</audio>
+<audio id="sound-correct">
+	<source src="https://s3.amazonaws.com/freecodecamp/simonSound1.mp3" type="audio/mp3">
+</audio>
+<audio id="sound-wrong">
+	<source src="https://s3.amazonaws.com/freecodecamp/simonSound2.mp3" type="audio/mp3">
+</audio>
+
+<script>
+	/* --- BỘ NÃO ĐIỀU KHIỂN CON VẬT ĐUỔI THEO CHUỘT --- */
+	const canvas = document.getElementById("monster-canvas");
+	const ctx = canvas.getContext("2d");
+	
+	let width = canvas.width = window.innerWidth;
+	let height = canvas.height = window.innerHeight;
+	
+	window.addEventListener("resize", () => {
+		width = canvas.width = window.innerWidth;
+		height = canvas.height = window.innerHeight;
+	});
+	
+	let targetMouse = { x: width / 2, y: height / 2 };
+	
+	window.addEventListener("mousemove", (e) => {
+		targetMouse.x = e.clientX;
+		targetMouse.y = e.clientY;
+	});
+
+	class Segment {
+		constructor(x, y, len, angle = 0) {
+			this.x = x;
+			this.y = y;
+			this.len = len;
+			this.angle = angle;
+			this.nextX = x + Math.cos(angle) * len;
+			this.nextY = y + Math.sin(angle) * len;
+		}
+		follow(tx, ty) {
+			let dx = tx - this.x;
+			let dy = ty - this.y;
+			this.angle = Math.atan2(dy, dx);
+			this.x = tx - Math.cos(this.angle) * this.len;
+			this.y = ty - Math.sin(this.angle) * this.len;
+		}
+		update() {
+			this.nextX = this.x + Math.cos(this.angle) * this.len;
+			this.nextY = this.y + Math.sin(this.angle) * this.len;
+		}
+	}
+	
+	let numSegments = 20;
+	let segments = [];
+	let segmentLength = 16;
+	for(let i = 0; i < numSegments; i++) {
+		segments.push(new Segment(width / 2, height / 2, segmentLength));
+	}
+	
+	function drawMonster() {
+		ctx.clearRect(0, 0, width, height);
+		
+		segments[0].follow(targetMouse.x, targetMouse.y);
+		segments[0].update();
+		
+		for(let i = 1; i < numSegments; i++) {
+			segments[i].follow(segments[i-1].x, segments[i-1].y);
+			segments[i].update();
+		}
+		
+		ctx.lineCap = "round";
+		ctx.lineJoin = "round";
+		
+		for(let i = 2; i < numSegments; i += 2) {
+			let seg = segments[i];
+			let angleLeft = seg.angle + Math.PI / 2;
+			let angleRight = seg.angle - Math.PI / 2;
+			let legSize = (numSegments - i) * 2.2 + 8;
+			
+			ctx.lineWidth = 2.5;
+			ctx.strokeStyle = "rgba(40, 58, 90, 0.45)";
+			
+			ctx.beginPath();
+			ctx.moveTo(seg.x, seg.y);
+			ctx.lineTo(seg.x + Math.cos(angleLeft) * legSize, seg.y + Math.sin(angleLeft) * legSize);
+			ctx.stroke();
+			
+			ctx.beginPath();
+			ctx.moveTo(seg.x, seg.y);
+			ctx.lineTo(seg.x + Math.cos(angleRight) * legSize, seg.y + Math.sin(angleRight) * legSize);
+			ctx.stroke();
+		}
+		
+		for(let i = 0; i < numSegments; i++) {
+			ctx.lineWidth = (numSegments - i) * 1.6 + 6;
+			ctx.strokeStyle = `rgba(18, 26, 40, ${0.85 - (i * 0.035)})`;
+			ctx.beginPath();
+			ctx.moveTo(segments[i].x, segments[i].y);
+			ctx.lineTo(segments[i].nextX, segments[i].nextY);
+			ctx.stroke();
+		}
+		
+		let head = segments[0];
+		ctx.fillStyle = "#ffd844";
+		ctx.shadowBlur = 12;
+		ctx.shadowColor = "#ffd844";
+		ctx.beginPath();
+		ctx.arc(head.x + Math.cos(head.angle + 0.4) * 6, head.y + Math.sin(head.angle + 0.4) * 6, 3.5, 0, Math.PI * 2);
+		ctx.arc(head.x + Math.cos(head.angle - 0.4) * 6, head.y + Math.sin(head.angle - 0.4) * 6, 3.5, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.shadowBlur = 0;
+		
+		requestAnimationFrame(drawMonster);
+	}
+	drawMonster();
+
+
+	/* --- LOGIC CÂU HỎI TRẮC NGHIỆM --- */
+	const quizData = [
+		{
+			image: "https://raw.githubusercontent.com/huynhlyductoantoan-creator/netdep/main/Qu%E1%BB%91c%20Huy%20Vi%E1%BB%87t%20Nam.jfif",
+			question: "Câu 1: Đây là biểu tượng thiêng liêng nào của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam?",
+			options: ["Quốc kỳ Việt Nam", "Quốc huy Việt Nam", "Huy hiệu Đoàn thanh niên", "Ấn bản triều Nguyễn"],
+			correct: 1
+		},
+		{
+			image: "https://raw.githubusercontent.com/huynhlyductoantoan-creator/netdep/main/Ban-do-dan-cu-Viet-Nam.webp",
+			question: "Câu 2: Dựa vào bản đồ phân bố dân cư Việt Nam, vùng nào có mật độ dân cư thưa thớt nhất?",
+			options: ["Đồng bằng sông Hồng", "Đồng bằng sông Cửu Long", "Tây Nguyên và vùng núi Tây Bắc", "Duyên hải miền Trung"],
+			correct: 2
+		},
+		{
+			image: "https://raw.githubusercontent.com/huynhlyductoantoan-creator/netdep/main/Ly%20Son%20Island%20is%20located%20in%20the%20north-east%20of%20Quang%20Ngai%20Province%2C%20about%2015%20nautical%20miles%20(27km)%20from%20mainland_.jfif",
+			question: "Câu 3: Hòn đảo xinh đẹp thuộc chủ quyền nước ta, được mệnh danh là 'vương quốc tỏi' ở Quảng Ngãi tên là gì?",
+			options: ["Đảo Phú Quốc", "Đảo Cát Bà", "Đảo Lý Sơn", "Đảo Cô Tô"],
+			correct: 2
+		},
+		{
+			image: "https://raw.githubusercontent.com/huynhlyductoantoan-creator/netdep/main/7%20bucket-list%20trips%20to%20take%20for%20each%20of%20life%E2%80%99s%20milestones%2C%20whether%20you're%20graduating%2C%20expecting%20o___.jfif",
+			question: "Câu 4: Bức ảnh trên chụp danh lam thắng cảnh nổi tiếng nào ở Quảng Ninh, từng được UNESCO công nhận là Di sản Thiên nhiên Thế giới?",
+			options: ["Vịnh Nha Trang", "Vịnh Hạ Long", "Vịnh Cam Ranh", "Vịnh Bái Tử Long"],
+			correct: 1
+		},
+		{
+			// ĐÃ SỬA: Đổi sang ảnh chuẩn Đỉnh núi Fansipan chính xác khớp với đáp án
+			image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Fansipan_2016.jpg/640px-Fansipan_2016.jpg",
+			question: "Câu 5: Vùng núi phía Bắc nước ta có đỉnh núi nào cao nhất, được mệnh danh là 'Nóc nhà của Đông Dương'?",
+			options: ["Đỉnh Fansipan (Phan-xi-păng)", "Đỉnh Tây Côn Lĩnh", "Đỉnh Ngọc Linh", "Đỉnh Ba Vì"],
+			correct: 0
+		}
+	];
+
+	let currentQuestionIndex = 0;
+	let score = 0;
+	let canAnswer = true;
+	let isMusicPlaying = false;
+
+	const bgMusic = document.getElementById("bg-music");
+	const soundCorrect = document.getElementById("sound-correct");
+	const soundWrong = document.getElementById("sound-wrong");
+	const audioBtn = document.getElementById("audio-btn");
+
+	function toggleMusic() {
+		if (isMusicPlaying) {
+			bgMusic.pause();
+			audioBtn.innerText = "🔇 Nhạc: Tắt";
+			isMusicPlaying = false;
+		} else {
+			bgMusic.play().catch(e => console.log("Hệ thống chờ tương tác chuột"));
+			audioBtn.innerText = "🔊 Nhạc: Bật";
+			isMusicPlaying = true;
+		}
+	}
+
+	// Cơ chế tự động kích hoạt âm thanh ngay khi chạm/click vào màn hình
+	document.body.addEventListener('click', function() {
+		if(!isMusicPlaying && bgMusic.paused) {
+			bgMusic.volume = 0.3;
+			bgMusic.play().catch(() => {});
+			isMusicPlaying = true;
+			audioBtn.innerText = "🔊 Nhạc: Bật";
+		}
+	}, { once: false });
+
+	function spawnConfetti() {
+		const overlay = document.getElementById("feedback-overlay");
+		const colors = ['#ffeb3b', '#ff5722', '#4caf50', '#00e5ff', '#e91e63'];
+		for (let i = 0; i < 30; i++) {
+			const particle = document.createElement("div");
+			particle.className = "confetti";
+			particle.style.left = Math.random() * 100 + "%";
+			particle.style.top = (Math.random() * 20) - 5 + "%";
+			particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+			particle.style.width = (Math.random() * 6 + 6) + "px";
+			particle.style.height = (Math.random() * 6 + 6) + "px";
+			particle.style.animationDuration = (Math.random() * 0.8 + 0.8) + "s";
+			overlay.appendChild(particle);
+		}
+	}
+
+	function clearConfetti() {
+		document.querySelectorAll(".confetti").forEach(c => c.remove());
+	}
+
+	function loadQuestion() {
+		canAnswer = true;
+		document.getElementById("feedback-overlay").style.display = "none";
+		clearConfetti();
+		
+		const currentQuiz = quizData[currentQuestionIndex];
+		
+		document.getElementById("progress").innerText = `Câu hỏi ${currentQuestionIndex + 1} / ${quizData.length}`;
+		document.getElementById("quiz-image").src = currentQuiz.image;
+		document.getElementById("question-text").innerText = currentQuiz.question;
+		
+		const optionsContainer = document.getElementById("options-container");
+		optionsContainer.innerHTML = "";
+		
+		currentQuiz.options.forEach((option, index) => {
+			const button = document.createElement("button");
+			button.classList.add("option-btn");
+			button.innerText = option;
+			button.onclick = () => selectOption(index, button);
+			optionsContainer.appendChild(button);
+		});
+	}
+
+	function selectOption(selectedIndex, clickedButton) {
+		if (!canAnswer) return;
+		canAnswer = false;
+
+		const currentQuiz = quizData[currentQuestionIndex];
+		const buttons = document.querySelectorAll(".option-btn");
+		const overlay = document.getElementById("feedback-overlay");
+		const fbIcon = document.getElementById("feedback-icon");
+		const fbText = document.getElementById("feedback-text");
+		const mainCard = document.getElementById("main-card");
+
+		if (selectedIndex === currentQuiz.correct) {
+			clickedButton.classList.add("correct");
+			score++;
+			soundCorrect.currentTime = 0;
+			soundCorrect.play().catch(() => {});
+			
+			fbIcon.innerText = "✨🎉✨";
+			fbText.innerText = "Chính xác, giỏi quá!";
+			fbText.className = "feedback-text good";
+			overlay.className = "feedback-overlay good-bg";
+			spawnConfetti(); 
+		} else {
+			clickedButton.classList.add("wrong");
+			buttons[currentQuiz.correct].classList.add("correct");
+			soundWrong.currentTime = 0;
+			soundWrong.play().catch(() => {});
+			
+			fbIcon.innerText = "💥";
+			fbText.innerText = "Tiếc quá, sai rồi!";
+			fbText.className = "feedback-text bad";
+			overlay.className = "feedback-overlay bad-bg";
+			
+			mainCard.classList.add("shake-screen");
+			setTimeout(() => mainCard.classList.remove("shake-screen"), 400);
+		}
+
+		setTimeout(() => { overlay.style.display = "flex"; }, 150);
+
+		setTimeout(() => {
+			currentQuestionIndex++;
+			if (currentQuestionIndex < quizData.length) {
+				loadQuestion();
+			} else {
+				showResults();
+			}
+		}, 2000); 
+	}
+
+	function showResults() {
+		document.getElementById("feedback-overlay").style.display = "none";
+		document.getElementById("quiz-screen").style.display = "none";
+		document.getElementById("result-screen").style.display = "block";
+		
+		document.getElementById("score-text").innerText = `Em đạt được ${score} / ${quizData.length} điểm!`;
+		
+		let rank = "";
+		if(score === 5) rank = "🥇 Trạng Nguyên Nhí! Kiến thức non sông đất nước của em thật tuyệt hảo!";
+		else if(score >= 3) rank = "🥈 Bạn Học Khá Giỏi! Cố gắng phát huy thêm ở những lần sau nha!";
+		else rank = "📚 Hãy ôn lại kiến thức Địa lý Lớp 5 và tham gia thử thách lại nhé!";
+		
+		document.getElementById("rank-text").innerText = rank;
+	}
+
+	function restartQuiz() {
+		currentQuestionIndex = 0;
+		score = 0;
+		document.getElementById("quiz-screen").style.display = "block";
+		document.getElementById("result-screen").style.display = "none";
+		loadQuestion();
+	}
+
+	loadQuestion();
+</script>
+
+</body>
+</html>
